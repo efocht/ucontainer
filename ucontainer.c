@@ -9,6 +9,7 @@
 #include <pwd.h>
 #include <grp.h>
 
+
 /* config file containing paths to (bind)mount */
 #ifdef TEST
 char volfile[] = "ucontainer.conf";
@@ -78,13 +79,14 @@ int mk_start_file(uid_t uid, int argc, char *argv[])
   dprintf(fd, "/usr/sbin/groupadd -g %d %s\n", gid, grp->gr_name);
   dprintf(fd, "/usr/sbin/useradd -g %d -d %s -M -u %d %s\n",
           gid, pwd->pw_dir, uid, pwd->pw_name);
-  dprintf(fd, "/sbin/runuser -u %s", pwd->pw_name);
+  dprintf(fd, "exec /sbin/runuser -u %s", pwd->pw_name);
   if (argc == 0) {
     dprintf(fd, " /bin/bash\n");
     interactive = 1;
   } else {
-    for (int i = 0; i < argc; i++)
+    for (int i = 0; i < argc; i++) {
       dprintf(fd, " %s", argv[i]);
+    }
     dprintf(fd, "\n");
   }
   fchmod(fd, 0755);
