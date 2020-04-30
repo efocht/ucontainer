@@ -112,29 +112,29 @@ void mk_docker_cmd()
   char *buffer = NULL;
   size_t len;
   FILE *fp;
-  if ((fp = fopen(volfile, "rb")) == NULL) {
-    perror("Failed to open volume config file!");
-    exit(1);
-  }
-  ssize_t bytes_read = getdelim( &buffer, &len, '\0', fp);
-  if (bytes_read == -1) {
-    perror("Failed while reading volume config file!");
-    exit(1);
-  }
-  fclose(fp);
-
-  char *vol;
-  vol = strtok(buffer, delim);
-  while (vol != NULL && cmdp < CMDMAX - 4) {
-    if (vol[0] == '#') {
-      vol = strtok(NULL, delim);
-      continue;
+  if ((fp = fopen(volfile, "rb")) != NULL) {
+    ssize_t bytes_read = getdelim( &buffer, &len, '\0', fp);
+    if (bytes_read == -1) {
+      perror("Failed while reading volume config file!");
+      exit(1);
     }
-    cmd[cmdp++] = cmd[CMDOFFS+6]; /* pointer to -v */
-    cmd[cmdp] = (char *)malloc(2 * strlen(vol) + 2);
-    sprintf(cmd[cmdp], "%s:%s", vol, vol);
-    ++cmdp;
-    vol = strtok(NULL, delim);
+    fclose(fp);
+
+    char *vol;
+    vol = strtok(buffer, delim);
+    while (vol != NULL && cmdp < CMDMAX - 4) {
+      if (vol[0] == '#') {
+        vol = strtok(NULL, delim);
+        continue;
+      }
+      cmd[cmdp++] = cmd[CMDOFFS+6]; /* pointer to -v */
+      cmd[cmdp] = (char *)malloc(2 * strlen(vol) + 2);
+      sprintf(cmd[cmdp], "%s:%s", vol, vol);
+      ++cmdp;
+      vol = strtok(NULL, delim);
+    }
+  } else {
+    perror("Failed to open volume config file!");
   }
 
   /* add imagename and /START.sh */
