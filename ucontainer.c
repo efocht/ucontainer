@@ -58,7 +58,7 @@ void usage(char *prog)
   printf("Run a command in a container on behalf of a normal user.\n");
   printf("The container bind-mounts a set of external directories.\n");
   printf("\nUsage:\n");
-  printf("\t%s [-i|--interactive] <image_name> [cmd ...]\n", prog);
+  printf("\t%s [-i|--interactive] <image_name> [cmd]\n", prog);
   exit(0);
 }
 
@@ -80,18 +80,21 @@ int mk_start_file(uid_t uid, int argc, char *argv[])
     perror("Could not locate group entry!");
     return -1;
   }
+  std::stringstream ssg, ssn, ssp, ss;
+  ssg << std::quoted(std::string(grp->gr_name));
   dprintf(fd, "#!/bin/bash\n");
-  dprintf(fd, "/usr/sbin/groupadd -g %d %s\n", gid, grp->gr_name);
+  dprintf(fd, "/usr/sbin/groupadd -g %d %s\n", gid, ssg.str().c_str());
+  ss.str(std::string());
+  ssp << std::quoted(std::string(pwd->pw_dir));
+  ssn << std::quoted(std::string(pwd->pw_name));
   dprintf(fd, "/usr/sbin/useradd -g %d -d %s -M -u %d %s\n",
-          gid, pwd->pw_dir, uid, pwd->pw_name);
+          gid, ssp.str().c_str(), uid, ssn.str().c_str());
   if (argc == 0) {
-    dprintf(fd, "exec /sbin/runuser -u %s -- /bin/bash\n", pwd->pw_name);
+    dprintf(fd, "exec /sbin/runuser -u %s -- /bin/bash\n", ssn.str().c_str());
   } else {
-    std::stringstream ss;
-    std::string str(argv[0]);
-    ss << std::quoted(str);
+    ss << std::quoted(std::string(argv[0]));
     dprintf(fd, "exec /sbin/runuser -u %s -- /bin/bash -c %s\n",
-            pwd->pw_name, ss.str().c_str());
+            ssn.str().c_str(), ss.str().c_str());
   }
   fchmod(fd, 0755);
   close(fd);
@@ -202,8 +205,8 @@ int main(int argc, char *argv[])
   int argp = 0;
 
   if (argc < 2 ||
-      strncmp(argv[1], "-h", 2) == 0 ||
-      strncmp(argv[1], "--help", 6) == 0)
+      strncmp(argv[1], "-h", 3) == 0 ||
+      strncmp(argv[1], "--help", 7) == 0)
     usage(argv[0]);
 
   uid_t uid = getuid();
@@ -223,8 +226,8 @@ int main(int argc, char *argv[])
   if (++argp >= argc)
     usage(argv[0]);
 
-  if (strncmp(argv[argp], "-i", 2) == 0 ||
-      strncmp(argv[argp], "--interactive", 13) == 0) {
+  if (strncmp(argv[argp], "-i", 3) == 0 ||
+      strncmp(argv[argp], "--interactive", 14) == 0) {
     interactive = 1;
     if (++argp >= argc)
       usage(argv[0]);
