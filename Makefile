@@ -3,7 +3,7 @@
 #
 
 ucontainer: ucontainer.c
-	gcc -o $@ $<
+	g++ -o $@ $<
 
 install: ucontainer
 	chown root:docker ucontainer

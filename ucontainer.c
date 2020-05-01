@@ -9,6 +9,11 @@
 #include <pwd.h>
 #include <grp.h>
 
+// only for std::quoted()
+#include <string>
+#include <iomanip>
+#include <sstream>
+
 
 /* config file containing paths to (bind)mount */
 #ifdef TEST
@@ -24,8 +29,8 @@ char imgname[PATHLEN];
 char homepath[PATHLEN];
 int interactive = 0;
 
-char *opt_interactive = "-it";
-char *opt_start = "/START.sh";
+char *opt_interactive = (char *)"-it";
+char *opt_start = (char *)"/START.sh";
 
 char delim[] = " \t\r\n\v\f"; /* possible delimiters in volfile */
 
@@ -36,13 +41,13 @@ char *cmd[CMDMAX] = {
                      "/usr/bin/gdb",
                      "--args",
                      */
-                     "/usr/bin/docker-current",
-                     "run",
-                     "--rm",
-                     "--rm", /* redundant, replaced by -it if interactive */
-                     "-w",   /* workdir -> home */
+                     (char *)"/usr/bin/docker-current",
+                     (char *)"run",
+                     (char *)"--rm",
+                     (char *)"--rm", /* redundant, replaced by -it if interactive */
+                     (char *)"-w",   /* workdir -> home */
                      NULL,   /* placeholder */
-                     "-v",   /* placeholder for bindmount of /START.sh */
+                     (char *)"-v",   /* placeholder for bindmount of /START.sh */
                      NULL
 };
 /* change the offset if you insert anything before the docker command */
@@ -79,15 +84,14 @@ int mk_start_file(uid_t uid, int argc, char *argv[])
   dprintf(fd, "/usr/sbin/groupadd -g %d %s\n", gid, grp->gr_name);
   dprintf(fd, "/usr/sbin/useradd -g %d -d %s -M -u %d %s\n",
           gid, pwd->pw_dir, uid, pwd->pw_name);
-  dprintf(fd, "exec /sbin/runuser -u %s", pwd->pw_name);
   if (argc == 0) {
-    dprintf(fd, " /bin/bash\n");
-    interactive = 1;
+    dprintf(fd, "exec /sbin/runuser -u %s -- /bin/bash\n", pwd->pw_name);
   } else {
-    for (int i = 0; i < argc; i++) {
-      dprintf(fd, " %s", argv[i]);
-    }
-    dprintf(fd, "\n");
+    std::stringstream ss;
+    std::string str(argv[0]);
+    ss << std::quoted(str);
+    dprintf(fd, "exec /sbin/runuser -u %s -- /bin/bash -c %s\n",
+            pwd->pw_name, ss.str().c_str());
   }
   fchmod(fd, 0755);
   close(fd);
