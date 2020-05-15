@@ -41,7 +41,7 @@ char *cmd[CMDMAX] = {
                      "/usr/bin/gdb",
                      "--args",
                      */
-                     (char *)"/usr/bin/docker-current",
+                     (char *)DOCKER_BIN,
                      (char *)"run",
                      (char *)"--rm",
                      (char *)"--rm", /* redundant, replaced by -it if interactive */
@@ -92,8 +92,10 @@ int mk_start_file(uid_t uid, int argc, char *argv[])
   if (argc == 0) {
     dprintf(fd, "exec /sbin/runuser -u %s -- /bin/bash\n", ssn.str().c_str());
   } else {
-    ss << std::quoted(std::string(argv[0]));
+    ss << std::quoted(std::string(argv[0]), '\'');
     dprintf(fd, "exec /sbin/runuser -u %s -- /bin/bash -c %s\n",
+            ssn.str().c_str(), ss.str().c_str());
+    printf("exec /sbin/runuser -u %s -- /bin/bash -c %s\n",
             ssn.str().c_str(), ss.str().c_str());
   }
   fchmod(fd, 0755);
@@ -163,6 +165,8 @@ void run_cmd()
 
     int err = execv(cmd[0], cmd);
     if (err) {
+      for (int i=0; cmd[i] != NULL; i++)
+        printf("cmd[%d]: %s\n", i, cmd[i]);
       perror("ERROR: execv");
       _exit(errno);
     }
